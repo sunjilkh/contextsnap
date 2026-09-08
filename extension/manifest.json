@@ -1,0 +1,30 @@
+{
+  "manifest_version": 3,
+  "name": "ContextSnap Tab Bridge",
+  "version": "0.1.0",
+  "description": "Lets the local ContextSnap daemon capture and restore your tabs. No network access, no telemetry.",
+  "minimum_chrome_version": "116",
+  "permissions": ["tabs", "tabGroups", "nativeMessaging", "storage", "alarms"],
+  "optional_permissions": ["sessions"],
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "options_ui": {
+    "page": "options.html",
+    "open_in_tab": false
+  },
+  "action": {
+    "default_title": "ContextSnap",
+    "default_popup": "options.html"
+  },
+  "icons": {
+    "128": "icons/icon128.png"
+  },
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "contextsnap@contextsnap.dev",
+      "strict_min_version": "115.0"
+    }
+  }
+}

@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>ContextSnap</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+      }
+      body {
+        margin: 0;
+        padding: 16px;
+        width: 320px;
+        font-size: 13px;
+        line-height: 1.45;
+      }
+      h1 {
+        margin: 0 0 4px;
+        font-size: 15px;
+      }
+      p.subtitle {
+        margin: 0 0 14px;
+        opacity: 0.7;
+      }
+      .status {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 10px;
+        border-radius: 6px;
+        background: rgba(127, 127, 127, 0.12);
+        margin-bottom: 14px;
+      }
+      .dot {
+        width: 9px;
+        height: 9px;
+        border-radius: 50%;
+        background: #c0392b;
+        flex: none;
+      }
+      .dot.connected {
+        background: #27ae60;
+      }
+      label {
+        display: flex;
+        gap: 8px;
+        align-items: flex-start;
+        margin-bottom: 10px;
+      }
+      label span small {
+        display: block;
+        opacity: 0.65;
+      }
+      button {
+        font: inherit;
+        padding: 6px 10px;
+        border-radius: 6px;
+        border: 1px solid rgba(127, 127, 127, 0.4);
+        background: transparent;
+        cursor: pointer;
+      }
+      footer {
+        margin-top: 14px;
+        padding-top: 10px;
+        border-top: 1px solid rgba(127, 127, 127, 0.25);
+        opacity: 0.7;
+      }
+      code {
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>ContextSnap</h1>
+    <p class="subtitle">Local tab bridge for the ContextSnap daemon.</p>
+
+    <div class="status">
+      <span class="dot" id="dot"></span>
+      <span id="status">Checking native host\u2026</span>
+    </div>
+
+    <label>
+      <input type="checkbox" id="enabled" />
+      <span>
+        Enabled
+        <small>Allow the local daemon to read and restore tabs.</small>
+      </span>
+    </label>
+
+    <label>
+      <input type="checkbox" id="includeTabTitles" />
+      <span>
+        Capture tab titles
+        <small>Turn off to store URLs only.</small>
+      </span>
+    </label>
+
+    <label>
+      <input type="checkbox" id="includeIncognito" />
+      <span>
+        Include private windows
+        <small>Off by default. Private tabs are never sanitized back into history.</small>
+      </span>
+    </label>
+
+    <label>
+      <input type="checkbox" id="restoreLazily" />
+      <span>
+        Restore tabs lazily
+        <small>Recreate tabs discarded so 200 tabs do not spawn 200 renderers.</small>
+      </span>
+    </label>
+
+    <button id="reconnect">Reconnect to daemon</button>
+
+    <footer>
+      Native host: <code>com.contextsnap.native_host</code><br />
+      Protocol v1 &middot; nothing leaves this machine.
+    </footer>
+
+    <script src="options.js"></script>
+  </body>
+</html>

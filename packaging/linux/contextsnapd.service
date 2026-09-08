@@ -1,0 +1,59 @@
+# User-scope systemd unit. Install with:
+#   systemctl --user enable --now contextsnapd.service
+#
+# It is intentionally a *user* unit: the daemon needs the user's session bus,
+# X11/Wayland display and browser profiles, and must never run as root.
+[Unit]
+Description=ContextSnap context-state daemon
+Documentation=https://github.com/contextsnap/contextsnap
+# Start after the graphical session so the HAL can reach the display server.
+After=graphical-session.target
+PartOf=graphical-session.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/contextsnapd --foreground
+ExecReload=/bin/kill -HUP $MAINPID
+Restart=on-failure
+RestartSec=3s
+
+# Logging goes to the journal; use `journalctl --user -u contextsnapd -f`.
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=contextsnapd
+
+# Resource ceiling: the daemon budget is ~30 MB, so 256 MB is a generous
+# backstop that still turns a leak into a restart instead of a swap storm.
+MemoryMax=256M
+TasksMax=64
+CPUWeight=20
+IOWeight=20
+Nice=5
+
+# Hardening. The daemon needs: the user's home (config, database, browser
+# session files), the runtime dir (socket) and the display server socket.
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=read-write
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+ProtectClock=yes
+ProtectHostname=yes
+RestrictNamespaces=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+SystemCallFilter=~@privileged @resources @obsolete
+CapabilityBoundingSet=
+# No network: ContextSnap is local-first and must not be able to phone home.
+PrivateNetwork=yes
+IPAddressDeny=any
+
+[Install]
+WantedBy=graphical-session.target

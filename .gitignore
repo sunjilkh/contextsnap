@@ -1,0 +1,79 @@
+# Build directories
+build/
+build-*/
+out/
+cmake-build-*/
+install/
+_deps/
+
+# CMake artifacts
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+CTestTestfile.cmake
+compile_commands.json
+CMakeUserPresets.json
+
+# Dependency managers
+vcpkg_installed/
+.vcpkg-root
+result
+result-*
+.direnv/
+
+# Editors / IDEs
+.vs/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.default.json
+.idea/
+*.user
+*.swp
+.cache/
+.clangd/
+
+# OS noise
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Binaries and objects
+*.o
+*.obj
+*.a
+*.lib
+*.so
+*.so.*
+*.dylib
+*.dll
+*.pdb
+*.exe
+*.ilk
+
+# Generated code
+generated/
+*.pb.cc
+*.pb.h
+*_generated.h
+
+# Local runtime state (never commit user snapshots)
+*.contextsnap.db
+*.contextsnap.db-wal
+*.contextsnap.db-shm
+snapshots/
+.contextsnap/
+
+# Extension packaging output
+extension/dist/
+extension/*.zip
+extension/*.xpi
+extension/*.crx
+node_modules/
+
+# Benchmarks and coverage
+bench-results/
+coverage/
+*.profraw
+*.profdata
+*.gcda
+*.gcno

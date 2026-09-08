@@ -1,0 +1,79 @@
+{
+  "$schema": "https://raw.githubusercontent.com/microsoft/vcpkg-tool/main/docs/vcpkg.schema.json",
+  "name": "contextsnap",
+  "version-semver": "0.1.0",
+  "description": "Open-source, local-first digital context-state snapshot platform",
+  "homepage": "https://github.com/contextsnap/contextsnap",
+  "license": "MIT OR Apache-2.0",
+  "supports": "windows | osx | linux",
+  "dependencies": [
+    {
+      "name": "sqlite3",
+      "features": ["json1", "fts5"]
+    }
+  ],
+  "features": {
+    "gui": {
+      "description": "Qt 6 / QML desktop client",
+      "dependencies": [
+        {
+          "name": "qtbase",
+          "default-features": false,
+          "features": ["gui", "widgets"]
+        },
+        "qtdeclarative",
+        "qtsvg"
+      ]
+    },
+    "protobuf": {
+      "description": "Protobuf RPC codec for the IPC interface",
+      "dependencies": ["protobuf"]
+    },
+    "flatbuffers": {
+      "description": "FlatBuffers binary snapshot export format",
+      "dependencies": ["flatbuffers"]
+    },
+    "sqlcipher": {
+      "description": "Encrypted snapshot database (AES-256-GCM at rest)",
+      "dependencies": ["sqlcipher"]
+    },
+    "crypto": {
+      "description": "OpenSSL-backed export encryption and key derivation",
+      "dependencies": [
+        {
+          "name": "openssl",
+          "default-features": false
+        }
+      ]
+    },
+    "lz4": {
+      "description": "Firefox recovery.jsonlz4 (mozlz4) passive session parsing",
+      "dependencies": ["lz4"]
+    },
+    "linux-x11": {
+      "description": "X11 backend via xcb",
+      "dependencies": [
+        {
+          "name": "libxcb",
+          "platform": "linux"
+        }
+      ]
+    },
+    "linux-wayland": {
+      "description": "Wayland backend via wayland-client protocols",
+      "dependencies": [
+        {
+          "name": "wayland",
+          "platform": "linux"
+        },
+        {
+          "name": "wayland-protocols",
+          "platform": "linux"
+        }
+      ]
+    }
+  },
+  "default-features": [],
+  "builtin-baseline": "0000000000000000000000000000000000000000",
+  "overrides": []
+}

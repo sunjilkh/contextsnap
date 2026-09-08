@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>org.contextsnap.ContextSnap</id>
+  <name>ContextSnap</name>
+  <summary>Capture and restore your desktop context</summary>
+
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>MIT OR Apache-2.0</project_license>
+
+  <developer id="org.contextsnap">
+    <name>The ContextSnap contributors</name>
+  </developer>
+
+  <description>
+    <p>
+      ContextSnap saves the shape of your work - which windows were open,
+      where they were, which workspace they lived on, which browser tabs were
+      loaded and where your cursor was - and puts it back on demand.
+    </p>
+    <p>
+      It is local-first: everything is stored in a SQLite database in your home
+      directory, the daemon has no network access at all, and URLs are
+      sanitized before they are written so password-reset links and OAuth codes
+      never land on disk.
+    </p>
+    <p>Typical uses:</p>
+    <ul>
+      <li>Restore your whole working set after a reboot or an update.</li>
+      <li>Keep one snapshot per project and switch between them in a keypress.</li>
+      <li>Park a debugging session, take a meeting, and come back to it intact.</li>
+    </ul>
+    <p>
+      On X11 window placement, stacking order, virtual desktops and cursor
+      position are all restored. On Wayland the compositor does not allow
+      unprivileged clients to place other applications' windows, so ContextSnap
+      records what was open and relaunches it; run "contextsnap doctor" to see
+      exactly what your session supports.
+    </p>
+  </description>
+
+  <launchable type="desktop-id">contextsnap.desktop</launchable>
+
+  <provides>
+    <binary>contextsnap</binary>
+    <binary>contextsnapd</binary>
+    <binary>contextsnap-gui</binary>
+  </provides>
+
+  <categories>
+    <category>Utility</category>
+    <category>System</category>
+  </categories>
+
+  <keywords>
+    <keyword>snapshot</keyword>
+    <keyword>session</keyword>
+    <keyword>workspace</keyword>
+    <keyword>tabs</keyword>
+    <keyword>layout</keyword>
+  </keywords>
+
+  <url type="homepage">https://github.com/contextsnap/contextsnap</url>
+  <url type="bugtracker">https://github.com/contextsnap/contextsnap/issues</url>
+  <url type="vcs-browser">https://github.com/contextsnap/contextsnap</url>
+  <url type="help">https://github.com/contextsnap/contextsnap/tree/main/docs</url>
+
+  <supports>
+    <control>keyboard</control>
+    <control>pointing</control>
+  </supports>
+
+  <recommends>
+    <display_length compare="ge">768</display_length>
+  </recommends>
+
+  <content_rating type="oars-1.1" />
+
+  <releases>
+    <release version="0.1.0" date="2026-01-01" type="development">
+      <description>
+        <p>First development release: capture and restore window layouts,
+        workspaces, cursor position and browser tabs, with a CLI, a daemon and
+        an optional Qt quick switcher.</p>
+      </description>
+    </release>
+  </releases>
+</component>

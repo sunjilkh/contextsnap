@@ -1,0 +1,178 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CONTEXTSNAP_HEADLESS: "1"
+  CONTEXTSNAP_HOST: ci-runner
+  VCPKG_DISABLE_METRICS: "1"
+
+jobs:
+  build:
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: linux-gcc
+            os: ubuntu-24.04
+            preset: ci-linux
+          - name: macos-clang
+            os: macos-14
+            preset: ci-macos
+          - name: windows-msvc
+            os: windows-2022
+            preset: ci-windows
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Linux dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            ninja-build libsqlite3-dev libssl-dev \
+            libx11-dev libxcb1-dev libxcb-randr0-dev libxcb-ewmh-dev \
+            libxcb-icccm4-dev libxcb-util-dev libwayland-dev wayland-protocols
+
+      - name: Install macOS dependencies
+        if: runner.os == 'macOS'
+        run: brew install ninja sqlite openssl@3
+
+      - name: Install Windows dependencies
+        if: runner.os == 'Windows'
+        run: choco install ninja --no-progress
+
+      - uses: ilammy/msvc-dev-cmd@v1
+        if: runner.os == 'Windows'
+
+      - name: Configure
+        run: cmake --preset ${{ matrix.preset }}
+
+      - name: Build
+        run: cmake --build --preset ${{ matrix.preset }}
+
+      - name: Test
+        run: ctest --preset ${{ matrix.preset }} --output-on-failure
+
+      - name: Smoke test the CLI
+        shell: bash
+        run: |
+          BIN="build/${{ matrix.preset }}"
+          find "$BIN" -name 'contextsnap*' -type f -perm -u+x -print || true
+          "$BIN/contextsnap" --version || "$BIN/Release/contextsnap.exe" --version
+          "$BIN/contextsnap" doctor --json || "$BIN/Release/contextsnap.exe" doctor --json
+
+      - name: Upload binaries
+        uses: actions/upload-artifact@v4
+        with:
+          name: contextsnap-${{ matrix.name }}
+          path: |
+            build/${{ matrix.preset }}/contextsnap*
+            build/${{ matrix.preset }}/Release/contextsnap*
+          if-no-files-found: warn
+          retention-days: 14
+
+  sanitizers:
+    name: asan+ubsan (linux)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            ninja-build libsqlite3-dev libssl-dev libx11-dev libxcb1-dev \
+            libxcb-randr0-dev libxcb-ewmh-dev libxcb-icccm4-dev libxcb-util-dev
+      - name: Configure with sanitizers
+        run: >
+          cmake -S . -B build/asan -G Ninja
+          -DCMAKE_BUILD_TYPE=Debug
+          -DCONTEXTSNAP_ENABLE_SANITIZERS=ON
+          -DCONTEXTSNAP_WARNINGS_AS_ERRORS=ON
+      - name: Build
+        run: cmake --build build/asan
+      - name: Test
+        env:
+          ASAN_OPTIONS: detect_leaks=1:strict_string_checks=1
+          UBSAN_OPTIONS: print_stacktrace=1:halt_on_error=1
+        run: ctest --test-dir build/asan --output-on-failure
+
+  static-analysis:
+    name: clang-tidy + format
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            ninja-build clang-tidy clang-format libsqlite3-dev libssl-dev \
+            libx11-dev libxcb1-dev libxcb-randr0-dev libxcb-ewmh-dev \
+            libxcb-icccm4-dev libxcb-util-dev
+      - name: Check formatting
+        run: |
+          find include src tests frontend -name '*.hpp' -o -name '*.cpp' \
+            | xargs clang-format --dry-run --Werror
+      - name: Configure with clang-tidy
+        run: >
+          cmake -S . -B build/tidy -G Ninja
+          -DCMAKE_BUILD_TYPE=Debug
+          -DCONTEXTSNAP_ENABLE_CLANG_TIDY=ON
+          -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+      - name: Build with clang-tidy
+        run: cmake --build build/tidy
+
+  extension:
+    name: extension lint
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Syntax-check the service worker
+        run: |
+          node --check extension/background.js
+          node --check extension/options.js
+      - name: Validate JSON documents
+        run: |
+          for file in extension/manifest.json schemas/*.json; do
+            echo "checking $file"
+            node -e "JSON.parse(require('fs').readFileSync('$file','utf8'))"
+          done
+
+  schema:
+    name: sql + schema validation
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Apply migrations to a scratch database
+        run: |
+          python3 - <<'PY'
+          import glob, sqlite3
+          connection = sqlite3.connect(":memory:")
+          for path in sorted(glob.glob("sql/*.sql")):
+              print("applying", path)
+              connection.executescript(open(path).read())
+          tables = [row[0] for row in connection.execute(
+              "SELECT name FROM sqlite_master WHERE type='table' ORDER BY name")]
+          print("tables:", tables)
+          for required in ("snapshots", "monitors", "windows", "tabs", "cursor_states"):
+              assert required in tables, f"missing table {required}"
+          PY

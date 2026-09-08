@@ -1,0 +1,30 @@
+[Desktop Entry]
+Type=Application
+Version=1.5
+Name=ContextSnap
+GenericName=Context Snapshots
+Comment=Capture and restore your desktop context: windows, tabs, workspaces
+Keywords=snapshot;session;windows;tabs;workspace;layout;restore;context;
+Exec=contextsnap-gui
+TryExec=contextsnap-gui
+Icon=contextsnap
+Terminal=false
+Categories=Utility;System;X-Productivity;
+StartupNotify=false
+StartupWMClass=contextsnap-gui
+SingleMainWindow=true
+X-GNOME-UsesNotifications=true
+
+Actions=Capture;QuickSwitcher;RestoreLatest;
+
+[Desktop Action Capture]
+Name=Capture context now
+Exec=contextsnap save
+
+[Desktop Action QuickSwitcher]
+Name=Open quick switcher
+Exec=contextsnap-gui
+
+[Desktop Action RestoreLatest]
+Name=Restore latest snapshot
+Exec=contextsnap restore --latest

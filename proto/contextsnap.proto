@@ -1,0 +1,362 @@
+// Canonical IDL for the contextsnapd RPC surface.
+//
+// The reference build speaks length-prefixed JSON (docs/ipc-protocol.md): zero
+// extra dependencies and debuggable with socat. This file is the normative
+// field/method contract and is compiled when -DCONTEXTSNAP_WITH_PROTOBUF=ON,
+// which swaps the codec without changing the framing (4-byte little-endian
+// length prefix, 16 MiB cap).
+//
+// Compatibility: never renumber or reuse a field, mark removals `reserved`, and
+// bump the negotiated protocol version only for breaking changes.
+
+syntax = "proto3";
+
+package contextsnap.v1;
+
+option cc_enable_arenas = true;
+
+// --- Domain model (mirrors include/contextsnap/core/types.hpp) --------------
+
+enum WindowState {
+  WINDOW_STATE_UNSPECIFIED = 0;
+  WINDOW_STATE_NORMAL = 1;
+  WINDOW_STATE_MINIMIZED = 2;
+  WINDOW_STATE_MAXIMIZED = 3;
+  WINDOW_STATE_FULLSCREEN = 4;
+  WINDOW_STATE_HIDDEN = 5;
+}
+
+enum PlatformKind {
+  PLATFORM_UNSPECIFIED = 0;
+  PLATFORM_WINDOWS = 1;
+  PLATFORM_MACOS = 2;
+  PLATFORM_LINUX = 3;
+}
+
+enum SessionType {
+  SESSION_UNSPECIFIED = 0;
+  SESSION_WIN32 = 1;
+  SESSION_QUARTZ = 2;
+  SESSION_X11 = 3;
+  SESSION_WAYLAND = 4;
+}
+
+enum BrowserKind {
+  BROWSER_NONE = 0;
+  BROWSER_CHROME = 1;
+  BROWSER_CHROMIUM = 2;
+  BROWSER_EDGE = 3;
+  BROWSER_BRAVE = 4;
+  BROWSER_VIVALDI = 5;
+  BROWSER_OPERA = 6;
+  BROWSER_FIREFOX = 7;
+  BROWSER_LIBREWOLF = 8;
+  BROWSER_SAFARI = 9;
+  BROWSER_OTHER = 10;
+}
+
+message Rect {
+  int32 x = 1;
+  int32 y = 2;
+  int32 width = 3;
+  int32 height = 4;
+}
+
+message Monitor {
+  string id = 1;
+  string name = 2;
+  Rect bounds = 3;
+  Rect work_area = 4;
+  uint32 dpi = 5;
+  double scale_factor = 6;
+  uint32 refresh_hz = 7;
+  string orientation = 8;
+  bool primary = 9;
+  string edid_hash = 10;
+}
+
+message ProcessInfo {
+  uint64 pid = 1;
+  string executable_path = 2;
+  repeated string command_line = 3;
+  string working_directory = 4;
+  string app_id = 5;
+  string user = 6;
+  bool single_instance = 7;
+  bool elevated = 8;
+}
+
+message Tab {
+  string id = 1;
+  uint32 index = 2;
+  string url = 3;
+  string title = 4;
+  string favicon_path = 5;
+  string group_id = 6;
+  string group_title = 7;
+  string cookie_store_id = 8;
+  int32 opener_index = 9;
+  int32 scroll_y = 10;
+  bool pinned = 11;
+  bool active = 12;
+  bool audible = 13;
+  bool muted = 14;
+  bool discarded = 15;
+  bool incognito = 16;
+  bool sanitized = 17;
+  int64 last_accessed_at = 18;
+  int32 restore_priority = 19;
+}
+
+message Window {
+  string id = 1;
+  uint64 native_handle = 2;
+  string title = 3;
+  string window_class = 4;
+  Rect frame = 5;
+  Rect client_area = 6;
+  Rect restored_frame = 7;
+  WindowState state = 8;
+  int32 z_order = 9;
+  string monitor_id = 10;
+  string workspace_id = 11;
+  string workspace_name = 12;
+  double opacity = 13;
+  bool focused = 14;
+  bool always_on_top = 15;
+  bool minimizable = 16;
+  bool resizable = 17;
+  bool captured_geometry_reliable = 18;
+  ProcessInfo process = 19;
+  BrowserKind browser = 20;
+  string browser_profile = 21;
+  repeated Tab tabs = 22;
+  string launch_hint = 23;
+}
+
+message CursorState {
+  int32 x = 1;
+  int32 y = 2;
+  string monitor_id = 3;
+  string focused_window_id = 4;
+}
+
+message SnapshotMetadata {
+  string id = 1;
+  string name = 2;
+  string description = 3;
+  repeated string tags = 4;
+  int64 created_at = 5;  // Unix milliseconds, UTC
+  int64 updated_at = 6;
+  PlatformKind platform = 7;
+  SessionType session_type = 8;
+  string host_name = 9;
+  string os_version = 10;
+  string app_version = 11;
+  uint32 schema_version = 12;
+  uint32 capture_duration_ms = 13;
+  bool favorite = 14;
+  bool automatic = 15;
+}
+
+message Snapshot {
+  SnapshotMetadata metadata = 1;
+  repeated Monitor monitors = 2;
+  repeated Window windows = 3;
+  CursorState cursor = 4;
+  string active_workspace_id = 5;
+}
+
+message SnapshotSummary {
+  string id = 1;
+  string name = 2;
+  repeated string tags = 3;
+  int64 created_at = 4;
+  uint32 window_count = 5;
+  uint32 tab_count = 6;
+  uint32 monitor_count = 7;
+  bool favorite = 8;
+  bool automatic = 9;
+}
+
+// --- Options ----------------------------------------------------------------
+
+message CaptureOptions {
+  bool include_tabs = 1;
+  bool include_minimized = 2;
+  bool include_cursor = 3;
+  bool include_incognito = 4;
+  bool include_all_workspaces = 5;
+  bool sanitize_urls = 6;
+  uint32 browser_timeout_ms = 7;
+  repeated string excluded_app_ids = 8;
+  repeated string excluded_url_patterns = 9;
+  string name = 10;
+  repeated string tags = 11;
+  bool automatic = 12;
+}
+
+message RestoreSelector {
+  enum Kind {
+    KIND_UNSPECIFIED = 0;
+    KIND_ALL = 1;
+    KIND_APP = 2;
+    KIND_WINDOW = 3;
+    KIND_TAB = 4;
+    KIND_MONITOR = 5;
+    KIND_WORKSPACE = 6;
+  }
+  Kind kind = 1;
+  string pattern = 2;  // glob, matched case-insensitively
+}
+
+message RestoreOptions {
+  string snapshot_id = 1;
+  repeated RestoreSelector selectors = 2;
+  bool launch_missing_apps = 3;
+  bool restore_tabs = 4;
+  bool lazy_load_tabs = 5;
+  bool restore_cursor = 6;
+  bool restore_focus = 7;
+  bool restore_z_order = 8;
+  bool restore_workspaces = 9;
+  bool close_conflicting_windows = 10;
+  bool dry_run = 11;
+  uint32 app_launch_timeout_ms = 12;
+  uint32 window_settle_timeout_ms = 13;
+  uint32 max_parallel_launches = 14;
+}
+
+message RestoreStep {
+  enum Kind {
+    KIND_UNSPECIFIED = 0;
+    KIND_LAUNCH_PROCESS = 1;
+    KIND_WAIT_FOR_WINDOW = 2;
+    KIND_MOVE_WINDOW = 3;
+    KIND_SET_WINDOW_STATE = 4;
+    KIND_SET_WORKSPACE = 5;
+    KIND_RAISE_WINDOW = 6;
+    KIND_RESTORE_TABS = 7;
+    KIND_WARP_CURSOR = 8;
+    KIND_FOCUS_WINDOW = 9;
+  }
+  Kind kind = 1;
+  string target_id = 2;
+  string description = 3;
+  bool skipped = 4;
+  string skip_reason = 5;
+}
+
+message RestorePlan {
+  string snapshot_id = 1;
+  repeated RestoreStep steps = 2;
+  repeated string warnings = 3;
+  uint32 estimated_duration_ms = 4;
+}
+
+message RestoreReport {
+  string snapshot_id = 1;
+  uint32 windows_restored = 2;
+  uint32 windows_failed = 3;
+  uint32 apps_launched = 4;
+  uint32 tabs_restored = 5;
+  uint32 duration_ms = 6;
+  repeated string warnings = 7;
+  repeated string errors = 8;
+}
+
+// --- RPC envelope -----------------------------------------------------------
+
+message Error {
+  string code = 1;  // not_found, invalid_argument, permission_denied, ...
+  string message = 2;
+  string context = 3;
+  int32 native_code = 4;
+}
+
+message HelloRequest {
+  uint32 protocol_version = 1;
+  string client_name = 2;
+  string client_version = 3;
+}
+
+message HelloResponse {
+  uint32 protocol_version = 1;
+  string daemon_version = 2;
+  PlatformKind platform = 3;
+  SessionType session_type = 4;
+  repeated string capabilities = 5;
+  repeated string limitations = 6;
+}
+
+message ListRequest {
+  uint32 limit = 1;
+  uint32 offset = 2;
+  repeated string tags = 3;
+  bool favorites_only = 4;
+  string order = 5;  // newest, oldest, name
+  string query = 6;  // optional FTS query
+}
+
+message ListResponse {
+  repeated SnapshotSummary snapshots = 1;
+  uint32 total = 2;
+}
+
+message SnapshotIdRequest {
+  string snapshot_id = 1;  // full ULID, unique prefix, or the literal "latest"
+}
+
+message MetadataUpdate {
+  string snapshot_id = 1;
+  string name = 2;
+  repeated string tags = 3;
+  bool favorite = 4;
+  string description = 5;
+}
+
+message HealthResponse {
+  bool daemon_ok = 1;
+  bool database_ok = 2;
+  bool browser_bridge_ok = 3;
+  uint32 snapshot_count = 4;
+  uint64 database_bytes = 5;
+  uint64 rss_bytes = 6;
+  uint32 uptime_seconds = 7;
+  repeated string missing_permissions = 8;
+  repeated string warnings = 9;
+}
+
+message Event {
+  enum Type {
+    TYPE_UNSPECIFIED = 0;
+    TYPE_SNAPSHOT_CREATED = 1;
+    TYPE_SNAPSHOT_DELETED = 2;
+    TYPE_SNAPSHOT_UPDATED = 3;
+    TYPE_RESTORE_STARTED = 4;
+    TYPE_RESTORE_PROGRESS = 5;
+    TYPE_RESTORE_FINISHED = 6;
+    TYPE_BROWSER_CONNECTED = 7;
+    TYPE_BROWSER_DISCONNECTED = 8;
+    TYPE_CONFIG_CHANGED = 9;
+    TYPE_DAEMON_SHUTDOWN = 10;
+  }
+  Type type = 1;
+  string snapshot_id = 2;
+  string message = 3;
+  uint32 progress_percent = 4;
+  int64 timestamp = 5;
+}
+
+service ContextSnap {
+  rpc Hello(HelloRequest) returns (HelloResponse);
+  rpc CaptureSnapshot(CaptureOptions) returns (Snapshot);
+  rpc ListSnapshots(ListRequest) returns (ListResponse);
+  rpc GetSnapshot(SnapshotIdRequest) returns (Snapshot);
+  rpc DeleteSnapshot(SnapshotIdRequest) returns (Error);
+  rpc UpdateMetadata(MetadataUpdate) returns (SnapshotSummary);
+  rpc PlanRestore(RestoreOptions) returns (RestorePlan);
+  rpc RestoreSnapshot(RestoreOptions) returns (RestoreReport);
+  rpc GetHealth(HelloRequest) returns (HealthResponse);
+  rpc Subscribe(HelloRequest) returns (stream Event);
+}

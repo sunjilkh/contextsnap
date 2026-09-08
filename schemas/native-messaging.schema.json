@@ -1,0 +1,131 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contextsnap.org/schemas/native-messaging.schema.json",
+  "title": "ContextSnap browser native messaging protocol v1",
+  "description": "Messages exchanged over stdio between the WebExtension and contextsnap-native-host: a 4-byte little-endian length prefix followed by UTF-8 JSON (browser-side limit 1 MiB per message).",
+  "oneOf": [{ "$ref": "#/$defs/extensionMessage" }, { "$ref": "#/$defs/hostMessage" }],
+  "$defs": {
+    "tab": {
+      "type": "object",
+      "required": ["index", "url"],
+      "properties": {
+        "tab_id": { "type": "integer" },
+        "index": { "type": "integer", "minimum": 0 },
+        "url": { "type": "string" },
+        "title": { "type": "string" },
+        "fav_icon_url": { "type": "string" },
+        "group_id": { "type": "integer" },
+        "group_title": { "type": "string" },
+        "cookie_store_id": { "type": "string" },
+        "opener_tab_index": { "type": "integer", "minimum": -1 },
+        "scroll_y": { "type": "integer" },
+        "pinned": { "type": "boolean" },
+        "active": { "type": "boolean" },
+        "audible": { "type": "boolean" },
+        "muted": { "type": "boolean" },
+        "discarded": { "type": "boolean" },
+        "incognito": { "type": "boolean" },
+        "last_accessed": { "type": "number" }
+      }
+    },
+    "extensionMessage": {
+      "title": "Extension to host",
+      "type": "object",
+      "required": ["type", "id"],
+      "properties": {
+        "type": { "enum": ["hello", "tabs", "restore_ack", "error", "pong", "browser_info"] },
+        "id": { "type": "string", "description": "Correlates a reply with its request." },
+        "protocol_version": { "type": "integer", "minimum": 1 },
+        "browser": {
+          "enum": [
+            "chrome", "chromium", "edge", "brave", "vivaldi", "opera",
+            "firefox", "librewolf", "safari", "other"
+          ]
+        },
+        "browser_version": { "type": "string" },
+        "profile": { "type": "string", "description": "Profile directory name, never a full path." },
+        "extension_version": { "type": "string" },
+        "windows": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["browser_window_id", "tabs"],
+            "properties": {
+              "browser_window_id": { "type": "integer" },
+              "native_handle": {
+                "type": ["integer", "null"],
+                "description": "HWND/CGWindowID when exposed; otherwise correlation falls back to title and geometry heuristics."
+              },
+              "focused": { "type": "boolean" },
+              "incognito": { "type": "boolean" },
+              "state": { "enum": ["normal", "minimized", "maximized", "fullscreen", "docked"] },
+              "bounds": {
+                "type": "object",
+                "properties": {
+                  "left": { "type": "integer" },
+                  "top": { "type": "integer" },
+                  "width": { "type": "integer" },
+                  "height": { "type": "integer" }
+                }
+              },
+              "tabs": { "type": "array", "items": { "$ref": "#/$defs/tab" } }
+            }
+          }
+        },
+        "error": { "type": "string" }
+      }
+    },
+    "hostMessage": {
+      "title": "Host to extension",
+      "type": "object",
+      "required": ["type", "id"],
+      "properties": {
+        "type": { "enum": ["hello", "collect_tabs", "restore_tabs", "ping", "config", "error"] },
+        "id": { "type": "string" },
+        "protocol_version": { "type": "integer", "minimum": 1 },
+        "host_version": { "type": "string" },
+        "include_incognito": { "type": "boolean", "default": false },
+        "include_scroll_position": { "type": "boolean", "default": false },
+        "lazy_load": {
+          "type": "boolean",
+          "default": true,
+          "description": "Create tabs discarded so a 200-tab restore does not fetch 200 pages."
+        },
+        "windows": {
+          "type": "array",
+          "description": "Tab sets to recreate; one browser window per element.",
+          "items": {
+            "type": "object",
+            "required": ["tabs"],
+            "properties": {
+              "target_window_id": {
+                "type": ["integer", "null"],
+                "description": "Reuse this browser window when present; otherwise create one."
+              },
+              "focused": { "type": "boolean" },
+              "tabs": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": ["url"],
+                  "properties": {
+                    "url": { "type": "string" },
+                    "title": { "type": "string" },
+                    "index": { "type": "integer", "minimum": 0 },
+                    "pinned": { "type": "boolean" },
+                    "active": { "type": "boolean" },
+                    "muted": { "type": "boolean" },
+                    "group_title": { "type": "string" },
+                    "cookie_store_id": { "type": "string" },
+                    "discarded": { "type": "boolean" }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "error": { "type": "string" }
+      }
+    }
+  }
+}

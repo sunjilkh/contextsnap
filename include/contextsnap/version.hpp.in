@@ -1,0 +1,63 @@
+// Generated from version.hpp.in by CMake. Do not edit the generated copy.
+//
+// This header is the single source of truth for identifiers that must agree
+// across the daemon, the CLI, the native messaging host and the browser
+// extension (socket names, host id, protocol versions).
+#pragma once
+
+#include <cstdint>
+#include <string>
+#include <string_view>
+
+namespace contextsnap {
+
+inline constexpr std::string_view kProjectName = "@PROJECT_NAME@";
+
+inline constexpr std::uint32_t kVersionMajor = @PROJECT_VERSION_MAJOR@;
+inline constexpr std::uint32_t kVersionMinor = @PROJECT_VERSION_MINOR@;
+inline constexpr std::uint32_t kVersionPatch = @PROJECT_VERSION_PATCH@;
+
+inline constexpr std::string_view kVersionString = "@PROJECT_VERSION@";
+
+/// Short alias used throughout the sources.
+inline constexpr std::string_view kVersion = kVersionString;
+
+inline constexpr std::string_view kGitSha = "@CONTEXTSNAP_GIT_SHA@";
+inline constexpr std::string_view kPlatformName = "@CONTEXTSNAP_PLATFORM_NAME@";
+inline constexpr std::string_view kBuildPlatform = kPlatformName;
+
+/// Snapshot document schema version. Bumped whenever the persisted snapshot
+/// shape changes in a way that older readers cannot ignore. Readers must
+/// refuse documents with a higher major schema version than they understand.
+inline constexpr std::uint32_t kSnapshotSchemaVersion = 1;
+
+/// IPC wire protocol version, negotiated in the `hello` handshake.
+inline constexpr std::uint32_t kIpcProtocolVersion = 1;
+
+/// Native messaging protocol version shared with the browser extension.
+inline constexpr std::uint32_t kNativeMessagingProtocolVersion = 1;
+
+/// Unix domain socket file name, created inside the runtime directory
+/// ($XDG_RUNTIME_DIR/contextsnap on Linux, ~/Library/Application Support on
+/// macOS).
+inline constexpr std::string_view kDefaultSocketName = "@CONTEXTSNAP_DEFAULT_SOCKET_NAME@";
+
+/// Windows named pipe path. A raw string literal keeps the backslashes intact.
+inline constexpr std::string_view kDefaultPipeName = R"(@CONTEXTSNAP_DEFAULT_PIPE_NAME@)";
+
+/// Native messaging host identifier; must match the extension's
+/// `nativeMessaging` host manifest file name.
+inline constexpr std::string_view kNativeHostId = "@CONTEXTSNAP_NATIVE_HOST_ID@";
+
+/// Human readable one-liner used by `--version` on every executable.
+[[nodiscard]] inline std::string version_string() {
+    std::string text;
+    text.append(kProjectName).append(" ").append(kVersionString);
+    if (!kGitSha.empty() && kGitSha != "unknown") {
+        text.append(" (").append(kGitSha).append(")");
+    }
+    text.append(" ").append(kPlatformName);
+    return text;
+}
+
+}  // namespace contextsnap

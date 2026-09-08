@@ -1,0 +1,23 @@
+* text=auto eol=lf
+
+*.ps1 text eol=crlf
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+*.png binary
+*.jpg binary
+*.ico binary
+*.icns binary
+*.gif binary
+*.pdf binary
+*.lz4 binary
+*.jsonlz4 binary
+*.snss binary
+*.bin binary
+*.fbb binary
+
+# Generated / vendored paths are excluded from language statistics.
+schemas/*.fbs linguist-language=FlatBuffers
+proto/*.proto linguist-language=Protocol-Buffer
+docs/** linguist-documentation
+tests/fixtures/** linguist-vendored

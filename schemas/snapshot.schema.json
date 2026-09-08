@@ -1,0 +1,154 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contextsnap.org/schemas/snapshot.schema.json",
+  "title": "ContextSnap snapshot document",
+  "description": "Envelope written by `contextsnap export --format json` and accepted by `contextsnap import`.",
+  "type": "object",
+  "required": ["format", "version", "snapshot"],
+  "properties": {
+    "format": { "const": "contextsnap.snapshot" },
+    "version": { "type": "integer", "minimum": 1 },
+    "exported_at": { "type": "string", "format": "date-time" },
+    "producer": { "type": "string" },
+    "snapshot": { "$ref": "#/$defs/snapshot" }
+  },
+  "$defs": {
+    "rect": {
+      "type": "object",
+      "required": ["x", "y", "width", "height"],
+      "properties": {
+        "x": { "type": "integer" },
+        "y": { "type": "integer" },
+        "width": { "type": "integer", "minimum": 0 },
+        "height": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "monitor": {
+      "type": "object",
+      "required": ["id", "bounds"],
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "bounds": { "$ref": "#/$defs/rect" },
+        "work_area": { "$ref": "#/$defs/rect" },
+        "dpi": { "type": "integer", "minimum": 1, "default": 96 },
+        "scale_factor": { "type": "number", "exclusiveMinimum": 0, "default": 1 },
+        "refresh_hz": { "type": "integer", "minimum": 0 },
+        "orientation": {
+          "enum": ["landscape", "portrait", "landscape-flipped", "portrait-flipped"]
+        },
+        "primary": { "type": "boolean" },
+        "edid_hash": { "type": "string" }
+      }
+    },
+    "process": {
+      "type": "object",
+      "properties": {
+        "pid": { "type": "integer", "minimum": 0 },
+        "executable_path": { "type": "string" },
+        "command_line": { "type": "array", "items": { "type": "string" } },
+        "working_directory": { "type": "string" },
+        "app_id": { "type": "string" },
+        "user": { "type": "string" },
+        "single_instance": { "type": "boolean" },
+        "elevated": { "type": "boolean" }
+      }
+    },
+    "tab": {
+      "type": "object",
+      "required": ["url"],
+      "properties": {
+        "id": { "type": "string" },
+        "index": { "type": "integer", "minimum": 0 },
+        "url": { "type": "string" },
+        "title": { "type": "string" },
+        "favicon_path": { "type": "string" },
+        "group_id": { "type": "string" },
+        "group_title": { "type": "string" },
+        "cookie_store_id": { "type": "string" },
+        "opener_index": { "type": "integer", "minimum": -1 },
+        "scroll_y": { "type": "integer" },
+        "pinned": { "type": "boolean" },
+        "active": { "type": "boolean" },
+        "audible": { "type": "boolean" },
+        "muted": { "type": "boolean" },
+        "discarded": { "type": "boolean" },
+        "incognito": { "type": "boolean" },
+        "sanitized": { "type": "boolean" },
+        "restore_priority": { "type": "integer" }
+      }
+    },
+    "window": {
+      "type": "object",
+      "required": ["id", "frame"],
+      "properties": {
+        "id": { "type": "string" },
+        "native_handle": { "type": "integer" },
+        "title": { "type": "string" },
+        "window_class": { "type": "string" },
+        "frame": { "$ref": "#/$defs/rect" },
+        "client_area": { "$ref": "#/$defs/rect" },
+        "restored_frame": { "$ref": "#/$defs/rect" },
+        "state": { "enum": ["normal", "minimized", "maximized", "fullscreen", "hidden"] },
+        "z_order": { "type": "integer" },
+        "monitor_id": { "type": "string" },
+        "workspace_id": { "type": "string" },
+        "workspace_name": { "type": "string" },
+        "opacity": { "type": "number", "minimum": 0, "maximum": 1 },
+        "focused": { "type": "boolean" },
+        "always_on_top": { "type": "boolean" },
+        "minimizable": { "type": "boolean" },
+        "resizable": { "type": "boolean" },
+        "captured_geometry_reliable": { "type": "boolean" },
+        "process": { "$ref": "#/$defs/process" },
+        "browser": {
+          "enum": [
+            "none", "chrome", "chromium", "edge", "brave", "vivaldi",
+            "opera", "firefox", "librewolf", "safari", "other"
+          ]
+        },
+        "browser_profile": { "type": "string" },
+        "tabs": { "type": "array", "items": { "$ref": "#/$defs/tab" } }
+      }
+    },
+    "snapshot": {
+      "type": "object",
+      "required": ["metadata", "monitors", "windows"],
+      "properties": {
+        "metadata": {
+          "type": "object",
+          "required": ["id", "created_at"],
+          "properties": {
+            "id": { "type": "string", "pattern": "^[0-9A-HJKMNP-TV-Z]{26}$" },
+            "name": { "type": "string" },
+            "description": { "type": "string" },
+            "tags": { "type": "array", "items": { "type": "string" } },
+            "created_at": { "type": "string", "format": "date-time" },
+            "updated_at": { "type": "string", "format": "date-time" },
+            "platform": { "enum": ["unknown", "windows", "macos", "linux"] },
+            "session_type": { "enum": ["unknown", "win32", "quartz", "x11", "wayland"] },
+            "host_name": { "type": "string" },
+            "os_version": { "type": "string" },
+            "app_version": { "type": "string" },
+            "schema_version": { "type": "integer", "minimum": 1 },
+            "capture_duration_ms": { "type": "integer", "minimum": 0 },
+            "favorite": { "type": "boolean" },
+            "automatic": { "type": "boolean" }
+          }
+        },
+        "monitors": { "type": "array", "items": { "$ref": "#/$defs/monitor" } },
+        "windows": { "type": "array", "items": { "$ref": "#/$defs/window" } },
+        "cursor": {
+          "type": "object",
+          "properties": {
+            "x": { "type": "integer" },
+            "y": { "type": "integer" },
+            "monitor_id": { "type": "string" },
+            "focused_window_id": { "type": "string" }
+          }
+        },
+        "active_workspace_id": { "type": "string" }
+      }
+    }
+  }
+}

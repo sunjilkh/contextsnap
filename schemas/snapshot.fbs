@@ -1,0 +1,155 @@
+// FlatBuffers IDL for ContextSnap snapshot export/import.
+//
+// Why: importing a 200-tab snapshot from JSON costs a full parse and thousands
+// of allocations; the FlatBuffers form is read in place, keeping
+// `contextsnap import` inside the latency budget. JSON stays the default
+// because it is diffable and human-auditable.
+//
+// flatc --cpp --gen-object-api --scoped-enums schemas/snapshot.fbs
+
+namespace contextsnap.fbs;
+
+file_identifier "CSNP";
+file_extension "csnap";
+
+enum WindowState : byte { Normal = 0, Minimized, Maximized, Fullscreen, Hidden }
+
+enum PlatformKind : byte { Unknown = 0, Windows, MacOS, Linux }
+
+enum SessionType : byte { Unknown = 0, Win32, Quartz, X11, Wayland }
+
+enum BrowserKind : byte {
+  None = 0,
+  Chrome,
+  Chromium,
+  Edge,
+  Brave,
+  Vivaldi,
+  Opera,
+  Firefox,
+  LibreWolf,
+  Safari,
+  Other
+}
+
+struct Rect {
+  x: int32;
+  y: int32;
+  width: int32;
+  height: int32;
+}
+
+table Monitor {
+  id: string (required, key);
+  name: string;
+  bounds: Rect;
+  work_area: Rect;
+  dpi: uint32 = 96;
+  scale_factor: float = 1.0;
+  refresh_hz: uint32 = 0;
+  orientation: string;
+  primary: bool = false;
+  edid_hash: string;
+}
+
+table Process {
+  pid: uint64 = 0;
+  executable_path: string;
+  command_line: [string];
+  working_directory: string;
+  app_id: string;
+  user: string;
+  single_instance: bool = false;
+  elevated: bool = false;
+}
+
+table Tab {
+  id: string;
+  index: uint32 = 0;
+  url: string;
+  title: string;
+  favicon_path: string;
+  group_id: string;
+  group_title: string;
+  cookie_store_id: string;
+  opener_index: int32 = -1;
+  scroll_y: int32 = 0;
+  pinned: bool = false;
+  active: bool = false;
+  audible: bool = false;
+  muted: bool = false;
+  discarded: bool = false;
+  incognito: bool = false;
+  sanitized: bool = false;
+  last_accessed_at: int64 = 0;
+  restore_priority: int32 = 0;
+}
+
+table Window {
+  id: string (required, key);
+  native_handle: uint64 = 0;
+  title: string;
+  window_class: string;
+  frame: Rect;
+  client_area: Rect;
+  restored_frame: Rect;
+  state: WindowState = Normal;
+  z_order: int32 = 0;
+  monitor_id: string;
+  workspace_id: string;
+  workspace_name: string;
+  opacity: float = 1.0;
+  focused: bool = false;
+  always_on_top: bool = false;
+  minimizable: bool = true;
+  resizable: bool = true;
+  captured_geometry_reliable: bool = true;
+  process: Process;
+  browser: BrowserKind = None;
+  browser_profile: string;
+  tabs: [Tab];
+  launch_hint: string;
+}
+
+table Cursor {
+  x: int32 = 0;
+  y: int32 = 0;
+  monitor_id: string;
+  focused_window_id: string;
+}
+
+table Metadata {
+  id: string (required);
+  name: string;
+  description: string;
+  tags: [string];
+  created_at: int64 = 0;  // Unix milliseconds, UTC
+  updated_at: int64 = 0;
+  platform: PlatformKind = Unknown;
+  session_type: SessionType = Unknown;
+  host_name: string;
+  os_version: string;
+  app_version: string;
+  schema_version: uint32 = 1;
+  capture_duration_ms: uint32 = 0;
+  favorite: bool = false;
+  automatic: bool = false;
+}
+
+table Snapshot {
+  metadata: Metadata (required);
+  monitors: [Monitor];
+  windows: [Window];
+  cursor: Cursor;
+  active_workspace_id: string;
+}
+
+// `contextsnap export --all` writes many snapshots into one archive.
+table Archive {
+  format_version: uint32 = 1;
+  exported_at: int64 = 0;
+  producer: string;
+  snapshots: [Snapshot];
+}
+
+root_type Archive;
