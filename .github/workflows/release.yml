@@ -1,0 +1,100 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*' # Push events to matching v*, i.e. v1.0, v20.15.10
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-package:
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: linux-x86_64
+            os: ubuntu-24.04
+            preset: ci-linux
+            artifact_name: contextsnap-linux-x86_64.tar.gz
+          - name: macos-x86_64
+            os: macos-14
+            preset: ci-macos
+            artifact_name: contextsnap-macos-x86_64.zip
+          - name: windows-x86_64
+            os: windows-2022
+            preset: ci-windows
+            artifact_name: contextsnap-windows-x86_64.zip
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Linux dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            ninja-build libsqlite3-dev libssl-dev \
+            libx11-dev libxcb1-dev libxcb-randr0-dev libxcb-ewmh-dev \
+            libxcb-icccm4-dev libxcb-util-dev libwayland-dev wayland-protocols
+
+      - name: Install macOS dependencies
+        if: runner.os == 'macOS'
+        run: brew install ninja sqlite openssl@3
+
+      - name: Install Windows dependencies
+        if: runner.os == 'Windows'
+        run: choco install ninja --no-progress
+
+      - uses: ilammy/msvc-dev-cmd@v1
+        if: runner.os == 'Windows'
+
+      - name: Configure
+        run: cmake --preset ${{ matrix.preset }}
+
+      - name: Build
+        run: cmake --build --preset ${{ matrix.preset }}
+
+      - name: Smoke test the CLI
+        shell: bash
+        run: |
+          BIN="build/${{ matrix.preset }}"
+          find "$BIN" -name 'contextsnap*' -type f -perm -u+x -print || true
+          "$BIN/contextsnap" --version || "$BIN/Release/contextsnap.exe" --version
+
+      - name: Package (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          mkdir -p contextsnap-release
+          cp build/${{ matrix.preset }}/contextsnap contextsnap-release/
+          cp build/${{ matrix.preset }}/contextsnapd contextsnap-release/
+          cp build/${{ matrix.preset }}/contextsnap-native-host contextsnap-release/
+          tar -czvf ${{ matrix.artifact_name }} -C contextsnap-release .
+
+      - name: Package (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          mkdir -p contextsnap-release
+          cp build/${{ matrix.preset }}/contextsnap contextsnap-release/
+          cp build/${{ matrix.preset }}/contextsnapd contextsnap-release/
+          cp build/${{ matrix.preset }}/contextsnap-native-host contextsnap-release/
+          zip -r ${{ matrix.artifact_name }} contextsnap-release/* -j
+
+      - name: Package (Windows)
+        if: runner.os == 'Windows'
+        shell: bash
+        run: |
+          mkdir -p contextsnap-release
+          cp build/${{ matrix.preset }}/Release/contextsnap.exe contextsnap-release/
+          cp build/${{ matrix.preset }}/Release/contextsnapd.exe contextsnap-release/
+          cp build/${{ matrix.preset }}/Release/contextsnap-native-host.exe contextsnap-release/
+          7z a ${{ matrix.artifact_name }} ./contextsnap-release/*
+
+      - name: Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ${{ matrix.artifact_name }}
