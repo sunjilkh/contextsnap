@@ -9,6 +9,10 @@ if(DEFINED ENV{VCPKG_ROOT} AND EXISTS "$ENV{VCPKG_ROOT}/scripts/buildsystems/vcp
   set(CMAKE_TOOLCHAIN_FILE "$ENV{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake"
       CACHE STRING "vcpkg toolchain file")
   message(STATUS "ContextSnap: using vcpkg toolchain at $ENV{VCPKG_ROOT}")
+elseif(DEFINED ENV{VCPKG_INSTALLATION_ROOT} AND EXISTS "$ENV{VCPKG_INSTALLATION_ROOT}/scripts/buildsystems/vcpkg.cmake")
+  set(CMAKE_TOOLCHAIN_FILE "$ENV{VCPKG_INSTALLATION_ROOT}/scripts/buildsystems/vcpkg.cmake"
+      CACHE STRING "vcpkg toolchain file")
+  message(STATUS "ContextSnap: using vcpkg toolchain at $ENV{VCPKG_INSTALLATION_ROOT}")
 else()
   message(STATUS "ContextSnap: no vcpkg toolchain detected, using system packages")
 endif()
